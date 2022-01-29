@@ -1,6 +1,6 @@
-module github.com/gin-contrib/zap
+module github.com/aklaud-code/zap
 
-go 1.16
+go 1.17
 
 require (
 	github.com/gin-gonic/gin v1.7.7
