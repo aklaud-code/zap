@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -43,10 +44,14 @@ func GinzapWithConfig(logger *zap.Logger, conf *Config) gin.HandlerFunc {
 	}
 
 	return func(c *gin.Context) {
+		c.Set("requestID", uuid.New().String())
 		start := time.Now()
 		// some evil middlewares modify this values
 		path := c.Request.URL.Path
 		query := c.Request.URL.RawQuery
+
+		requestID := uuid.New().String()
+		c.Set("requestID", requestID)
 		c.Next()
 
 		if _, ok := skipPaths[path]; !ok {
@@ -63,6 +68,8 @@ func GinzapWithConfig(logger *zap.Logger, conf *Config) gin.HandlerFunc {
 				}
 			} else {
 				fields := []zapcore.Field{
+					zap.String("type", "internal"),
+					zap.String("tags", requestID),
 					zap.Int("status", c.Writer.Status()),
 					zap.String("method", c.Request.Method),
 					zap.String("path", path),
@@ -114,6 +121,8 @@ func RecoveryWithZap(logger *zap.Logger, stack bool) gin.HandlerFunc {
 
 				if stack {
 					logger.Error("[Recovery from panic]",
+						zap.String("type", "internal"),
+						zap.String("tags", c.GetString("requestID")),
 						zap.Time("time", time.Now()),
 						zap.Any("error", err),
 						zap.String("request", string(httpRequest)),
@@ -121,6 +130,8 @@ func RecoveryWithZap(logger *zap.Logger, stack bool) gin.HandlerFunc {
 					)
 				} else {
 					logger.Error("[Recovery from panic]",
+						zap.String("type", "internal"),
+						zap.String("tags", c.GetString("requestID")),
 						zap.Time("time", time.Now()),
 						zap.Any("error", err),
 						zap.String("request", string(httpRequest)),
